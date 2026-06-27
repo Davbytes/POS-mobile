@@ -13,9 +13,14 @@ const NAV = [
 ];
 
 export default function DrawerContent({ state, navigation, devBypass, setDevBypass }) {
-  const { location, setLocation } = useLocation();
-  const { signOut, isSignedIn }   = useAuth();
-  const activeRoute = state.routes[state.index].name;
+  const locationCtx = useLocation();
+  const { signOut, isSignedIn } = useAuth();
+
+  // Guard: context or navigation state not ready yet
+  if (!locationCtx || !state) return null;
+
+  const { location, setLocation } = locationCtx;
+  const activeRoute = state.routes[state.index]?.name ?? 'Dashboard';
 
   const handleSignOut = async () => {
     navigation.closeDrawer();

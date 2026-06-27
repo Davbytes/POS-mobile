@@ -4,6 +4,7 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { ActivityIndicator, View } from 'react-native';
 import { tokenCache } from './src/api/tokenCache';
+import { LocationProvider } from './src/context/LocationContext';
 
 import LoginScreen      from './src/screens/LoginScreen';
 import DashboardScreen  from './src/screens/DashboardScreen';
@@ -12,6 +13,14 @@ import ProductionScreen from './src/screens/ProductionScreen';
 import PurchasesScreen  from './src/screens/PurchasesScreen';
 import ReportsScreen    from './src/screens/ReportsScreen';
 import DrawerContent    from './src/components/DrawerContent';
+
+// ── MUST BE LAST IMPORT ───────────────────────────────────────────────────────
+// Unconditionally replaces globalThis.atob with a lenient decoder that
+// auto-pads base64url strings. Fixes the Clerk JWT decode crash:
+//   "Not a valid base64 encoded string length"
+// Must come after all Clerk imports so it overwrites whatever atob they installed.
+import './src/shims/base64Patch';
+// ─────────────────────────────────────────────────────────────────────────────
 
 const Drawer = createDrawerNavigator();
 
@@ -66,9 +75,11 @@ export default function App() {
       publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY}
       tokenCache={tokenCache}
     >
-      <NavigationContainer>
-        <RootNavigator devBypass={devBypass} setDevBypass={setDevBypass} />
-      </NavigationContainer>
+      <LocationProvider>
+        <NavigationContainer>
+          <RootNavigator devBypass={devBypass} setDevBypass={setDevBypass} />
+        </NavigationContainer>
+      </LocationProvider>
     </ClerkProvider>
   );
 }
