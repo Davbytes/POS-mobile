@@ -1,7 +1,6 @@
 # POS Mobile — Full Project README
 
 **Project:** Point-of-Sale Mobile App for Restaurant & Hospitality Management
-**Student:** Axiom — CIT-227-006/2022, Multimedia University of Kenya
 **Stack:** React Native (Expo SDK 51) + Node.js/Express REST API + SQLite (planned)
 **Last updated:** 27 Jun 2026
 
