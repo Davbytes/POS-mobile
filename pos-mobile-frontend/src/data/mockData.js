@@ -30,10 +30,10 @@ export const STOCK_PRODUCTS = [
 
 // ─── PRODUCTIONS ──────────────────────────────────────────────────────────────
 export const PRODUCTIONS = [
-  { id: 1, product: "Beef Burger",     stock_product: "Beef (kg)",     conversion_factor: 0.25, used_stock: 22.25, current_stock: 8  },
-  { id: 2, product: "Grilled Chicken", stock_product: "Chicken (kg)",  conversion_factor: 0.5,  used_stock: 27.5,  current_stock: 5  },
-  { id: 3, product: "Caesar Salad",    stock_product: "Tomatoes (kg)", conversion_factor: 0.1,  used_stock: 4.2,   current_stock: 14 },
-  { id: 4, product: "Tilapia Fillet",  stock_product: "Tilapia (kg)",  conversion_factor: 0.4,  used_stock: 12.8,  current_stock: 3  },
+  { id: 1, product: "Beef Burger",     stock_product: "Beef (kg)",     used_stock: 22.25, current_stock: 8  },
+  { id: 2, product: "Grilled Chicken", stock_product: "Chicken (kg)",  used_stock: 27.5,  current_stock: 5  },
+  { id: 3, product: "Caesar Salad",    stock_product: "Tomatoes (kg)", used_stock: 4.2,   current_stock: 14 },
+  { id: 4, product: "Tilapia Fillet",  stock_product: "Tilapia (kg)",  used_stock: 12.8,  current_stock: 3  },
 ];
 
 // ─── PURCHASES ────────────────────────────────────────────────────────────────
@@ -56,8 +56,21 @@ export const DAILY_SALES = [
   { time: "12:04", product: "Pilsner Urquell",       qty: 3, unit_price: 350,  total: 1050, channel: "Counter – Self",  payment: "M-Pesa", stock_after: 57  },
 ];
 
+// ─── WAITER RANKINGS ──────────────────────────────────────────────────────────
+// Aggregated from DAILY_SALES — waiter rows only (channel starts with "Waiter –")
+export const WAITER_STATS = (() => {
+  const map = {};
+  DAILY_SALES.forEach(({ channel, total, qty }) => {
+    if (!channel.startsWith('Waiter –')) return;
+    const name = channel.replace('Waiter – ', '');
+    if (!map[name]) map[name] = { name, revenue: 0, units: 0 };
+    map[name].revenue += total;
+    map[name].units   += qty;
+  });
+  return Object.values(map).sort((a, b) => b.revenue - a.revenue);
+})();
+
 // ─── DERIVED ──────────────────────────────────────────────────────────────────
-export const TOP_SELLERS             = [...PRODUCTS].sort((a, b) => b.current_sales - a.current_sales).slice(0, 5);
 export const LOW_STOCK               = PRODUCTS.filter(p => p.stock <= p.reorder_level).sort((a, b) => a.stock - b.stock);
 export const TOTAL_MONTHLY_SALES     = DAILY_SALES.reduce((s, r) => s + r.total, 0) * 38;
 export const TOTAL_MONTHLY_PURCHASES = PURCHASES.reduce((s, p) => s + p.grand_total, 0);
