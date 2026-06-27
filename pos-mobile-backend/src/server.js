@@ -19,6 +19,7 @@ app.use('/products',    productsRouter);
 app.use('/orders',      ordersRouter);
 app.use('/purchases',   purchasesRouter);
 app.use('/productions', productionsRouter);
+app.use('/auth', require('./routes/auth'));
 
 // ─── HEALTH CHECK ────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ status: 'ok', port: PORT }));

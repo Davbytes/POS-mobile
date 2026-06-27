@@ -1,79 +1,74 @@
-import 'react-native-gesture-handler';
+import React, { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
+import { ActivityIndicator, View } from 'react-native';
+import { tokenCache } from './src/api/tokenCache';
 
-import { LocationProvider, useLocation } from './src/context/LocationContext';
-import LocationScreen    from './src/screens/LocationScreen';
-import DashboardScreen   from './src/screens/DashboardScreen';
-import ProductsScreen    from './src/screens/ProductsScreen';
-import ProductionScreen  from './src/screens/ProductionScreen';
-import PurchasesScreen   from './src/screens/PurchasesScreen';
-import ReportsScreen     from './src/screens/ReportsScreen';
-import DrawerContent     from './src/components/DrawerContent';
-import { colors, font }  from './src/theme';
+import LoginScreen      from './src/screens/LoginScreen';
+import DashboardScreen  from './src/screens/DashboardScreen';
+import ProductsScreen   from './src/screens/ProductsScreen';
+import ProductionScreen from './src/screens/ProductionScreen';
+import PurchasesScreen  from './src/screens/PurchasesScreen';
+import ReportsScreen    from './src/screens/ReportsScreen';
+import DrawerContent    from './src/components/DrawerContent';
 
 const Drawer = createDrawerNavigator();
 
-function Header({ navigation, route }) {
-  const hour    = new Date().getHours();
-  const inShift = hour >= 8 && hour < 20;
-  return (
-    <View style={s.header}>
-      <TouchableOpacity onPress={() => navigation.openDrawer()} style={s.menuBtn}>
-        <Text style={s.menuIcon}>☰</Text>
-      </TouchableOpacity>
-      <Text style={s.headerTitle}>{route.name}</Text>
-      <View style={s.shiftPill}>
-        <View style={[s.dot, { backgroundColor: inShift ? colors.green : colors.gray400 }]} />
-        <Text style={s.shiftText}>{inShift ? 'Shift On' : 'No Shift'}</Text>
+function RootNavigator({ devBypass, setDevBypass }) {
+  const { isLoaded, isSignedIn } = useAuth();
+
+  // Register the bypass function globally so LoginScreen button can call it
+  global.__devBypass = () => setDevBypass(true);
+
+  // Show spinner while Clerk loads session from SecureStore
+  if (!isLoaded && !devBypass) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#1161ee" />
       </View>
-    </View>
-  );
-}
+    );
+  }
 
-function MainApp() {
-  return (
-    <NavigationContainer>
-      <Drawer.Navigator
-        drawerContent={props => <DrawerContent {...props} />}
-        screenOptions={({ navigation, route }) => ({
-          header: () => <Header navigation={navigation} route={route} />,
-          drawerStyle: { width: 260 },
-        })}
-      >
-        <Drawer.Screen name="Dashboard"  component={DashboardScreen}  />
-        <Drawer.Screen name="Products"   component={ProductsScreen}   />
-        <Drawer.Screen name="Production" component={ProductionScreen} />
-        <Drawer.Screen name="Purchases"  component={PurchasesScreen}  />
-        <Drawer.Screen name="Reports"    component={ReportsScreen}    />
+  // Not signed in and no dev bypass → show Login only
+  if (!isSignedIn && !devBypass) {
+    return (
+      <Drawer.Navigator screenOptions={{ headerShown: false, swipeEnabled: false }}>
+        <Drawer.Screen
+          name="Login"
+          component={LoginScreen}
+          options={{ drawerItemStyle: { display: 'none' } }}
+        />
       </Drawer.Navigator>
-    </NavigationContainer>
-  );
-}
+    );
+  }
 
-function AppRouter() {
-  const { location } = useLocation();
-  return location ? <MainApp /> : <LocationScreen />;
+  // Signed in OR dev bypass → show full app
+  return (
+    <Drawer.Navigator
+      drawerContent={(props) => <DrawerContent {...props} devBypass={devBypass} setDevBypass={setDevBypass} />}
+      screenOptions={{ headerShown: true }}
+    >
+      <Drawer.Screen name="Dashboard"  component={DashboardScreen}  />
+      <Drawer.Screen name="Products"   component={ProductsScreen}   />
+      <Drawer.Screen name="Production" component={ProductionScreen} />
+      <Drawer.Screen name="Purchases"  component={PurchasesScreen}  />
+      <Drawer.Screen name="Reports"    component={ReportsScreen}    />
+    </Drawer.Navigator>
+  );
 }
 
 export default function App() {
+  const [devBypass, setDevBypass] = useState(false);
+
   return (
-    <SafeAreaProvider>
-      <LocationProvider>
-        <AppRouter />
-      </LocationProvider>
-    </SafeAreaProvider>
+    <ClerkProvider
+      publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      tokenCache={tokenCache}
+    >
+      <NavigationContainer>
+        <RootNavigator devBypass={devBypass} setDevBypass={setDevBypass} />
+      </NavigationContainer>
+    </ClerkProvider>
   );
 }
-
-const s = StyleSheet.create({
-  header:      { backgroundColor: colors.white, flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 48, borderBottomWidth: 1, borderBottomColor: colors.gray200 },
-  menuBtn:     { marginRight: 12 },
-  menuIcon:    { fontSize: 22, color: colors.gray800 },
-  headerTitle: { fontSize: font.lg, fontWeight: '700', color: colors.gray800, flex: 1 },
-  shiftPill:   { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.gray100, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
-  dot:         { width: 7, height: 7, borderRadius: 4 },
-  shiftText:   { fontSize: 11, color: colors.gray600, fontWeight: '600' },
-});
