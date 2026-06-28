@@ -4,14 +4,15 @@ import TableCard, { Row } from '../components/TableCard';
 import SectionHeader from '../components/SectionHeader';
 import Badge from '../components/Badge';
 import {
-  DAILY_SALES, TOP_SELLERS, LOW_STOCK,
+  DAILY_SALES, WAITER_STATS, LOW_STOCK,
   TOTAL_MONTHLY_SALES, TOTAL_MONTHLY_PURCHASES, SHIFT_SALES,
 } from '../data/mockData';
 import { colors, spacing, font } from '../theme';
 
 const fmt = n => `KSh ${n.toLocaleString()}`;
-
 const paymentVariant = p => p === 'Cash' ? 'green' : p === 'Card' ? 'blue' : 'amber';
+
+const RANK_MEDALS = ['🥇', '🥈', '🥉'];
 
 export default function DashboardScreen() {
   const hour    = new Date().getHours();
@@ -22,12 +23,12 @@ export default function DashboardScreen() {
 
       {/* ── STAT CARDS ── */}
       <View style={s.cardsRow}>
-        <StatCard label="Monthly Sales"    value={fmt(TOTAL_MONTHLY_SALES)}     sub="June 2024"          variant="blue"   icon="📈" />
-        <StatCard label="Monthly Purchases" value={fmt(TOTAL_MONTHLY_PURCHASES)} sub="June 2024"          variant="green"  icon="🛒" />
+        <StatCard label="Monthly Sales"     value={fmt(TOTAL_MONTHLY_SALES)}     sub="June 2024"           variant="blue"   icon="📈" />
+        <StatCard label="Monthly Purchases" value={fmt(TOTAL_MONTHLY_PURCHASES)} sub="June 2024"           variant="green"  icon="🛒" />
       </View>
       <View style={s.cardsRow}>
-        <StatCard label="Shift Sales"      value={inShift ? fmt(SHIFT_SALES) : 'KSh 0'} sub={inShift ? '08:00–20:00' : 'No active shift'} variant="amber"  icon="💰" />
-        <StatCard label="Low Stock Alerts" value={String(LOW_STOCK.length)}      sub="Below reorder level" variant="purple" icon="⚠️" />
+        <StatCard label="Shift Sales"       value={inShift ? fmt(SHIFT_SALES) : 'KSh 0'} sub={inShift ? '08:00–20:00' : 'No active shift'} variant="amber"  icon="💰" />
+        <StatCard label="Low Stock Alerts"  value={String(LOW_STOCK.length)}      sub="Below reorder level" variant="purple" icon="⚠️" />
       </View>
 
       {/* ── DAILY SALES ── */}
@@ -49,16 +50,18 @@ export default function DashboardScreen() {
         ))}
       </View>
 
-      {/* ── TOP SELLERS ── */}
+      {/* ── TOP SELLERS (WAITERS) ── */}
       <View style={s.section}>
-        <SectionHeader title="Top Sellers" badge="By quantity" />
-        {TOP_SELLERS.map((p, i) => (
-          <TableCard key={p.id}>
+        <SectionHeader title="Top Sellers" badge="Waiter ranking" />
+        {WAITER_STATS.map((w, i) => (
+          <TableCard key={w.name}>
             <View style={s.cardTopRow}>
-              <Text style={s.cardTitle}>{i + 1}. {p.name}</Text>
+              <Text style={s.cardTitle}>
+                {RANK_MEDALS[i] ?? `#${i + 1}`}{'  '}{w.name}
+              </Text>
             </View>
-            <Row label="Units Sold" value={String(p.current_sales)} />
-            <Row label="Revenue"    value={fmt(p.current_sales * p.price)} valueColor={colors.green} />
+            <Row label="Revenue"    value={fmt(w.revenue)}      valueColor={colors.green} />
+            <Row label="Units Sold" value={String(w.units)} />
           </TableCard>
         ))}
       </View>
@@ -72,7 +75,7 @@ export default function DashboardScreen() {
               <Text style={s.cardTitle}>{p.name}</Text>
               <Badge label="Reorder" variant="red" />
             </View>
-            <Row label="Current Stock" value={String(p.stock)} valueColor={colors.red} />
+            <Row label="Current Stock" value={String(p.stock)}         valueColor={colors.red} />
             <Row label="Reorder Level" value={String(p.reorder_level)} />
           </TableCard>
         ))}

@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { DrawerContentScrollView } from '@react-navigation/drawer';
 import { useLocation } from '../context/LocationContext';
 import { useAuth } from '@clerk/clerk-expo';
+import { LOCATIONS } from '../data/mockData';
 import { colors, spacing, font, radius } from '../theme';
 
 const NAV = [
@@ -13,18 +14,31 @@ const NAV = [
 ];
 
 export default function DrawerContent({ state, navigation, devBypass, setDevBypass }) {
-  const { location, setLocation } = useLocation();
-  const { signOut, isSignedIn }   = useAuth();
-  const activeRoute = state.routes[state.index].name;
+  const locationCtx = useLocation();
+  const { signOut, isSignedIn } = useAuth();
+
+  // Guard: context or navigation state not ready yet
+  if (!locationCtx || !state) return null;
+
+  const { location, setLocation } = locationCtx;
+  const activeRoute = state.routes[state.index]?.name ?? 'Dashboard';
 
   const handleSignOut = async () => {
     navigation.closeDrawer();
     if (devBypass) {
-      // Dev bypass — just reset the flag, no Clerk session to clear
       setDevBypass(false);
     } else {
       await signOut();
     }
+  };
+
+  // Switch to another branch without signing out — owner use case
+  const handleSwitchBranch = (branch) => {
+    if (branch.id !== location?.id) {
+      setLocation(branch);
+      navigation.navigate('Dashboard');
+    }
+    navigation.closeDrawer();
   };
 
   return (
@@ -37,7 +51,9 @@ export default function DrawerContent({ state, navigation, devBypass, setDevBypa
         </View>
         <View style={{ flex: 1 }}>
           <Text style={s.appName}>POS Manager</Text>
-          <Text style={s.locationName}>{location?.name?.split('–')[0]?.trim()}</Text>
+          <Text style={s.locationName} numberOfLines={1}>
+            {location?.name?.split('–')[0]?.trim() ?? 'No branch selected'}
+          </Text>
         </View>
       </View>
 
@@ -76,15 +92,29 @@ export default function DrawerContent({ state, navigation, devBypass, setDevBypa
         })}
       </View>
 
-      {/* ── FOOTER ── */}
-      <View style={s.footer}>
-        <TouchableOpacity
-          style={s.footerBtn}
-          onPress={() => { navigation.closeDrawer(); setLocation(null); }}
-        >
-          <Text style={s.footerBtnText}>📍  Change Branch</Text>
-        </TouchableOpacity>
+      {/* ── BRANCH SWITCHER ── */}
+      <View style={s.branchSection}>
+        <Text style={s.branchSectionLabel}>📍  Branches</Text>
+        {LOCATIONS.map(l => {
+          const active = l.id === location?.id;
+          return (
+            <TouchableOpacity
+              key={l.id}
+              style={[s.branchItem, active && s.branchItemActive]}
+              onPress={() => handleSwitchBranch(l)}
+              activeOpacity={0.7}
+            >
+              <View style={[s.branchDot, active && s.branchDotActive]} />
+              <Text style={[s.branchText, active && s.branchTextActive]} numberOfLines={1}>
+                {l.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
+      {/* ── SIGN OUT ── */}
+      <View style={s.footer}>
         <TouchableOpacity style={[s.footerBtn, s.logoutBtn]} onPress={handleSignOut}>
           <Text style={s.logoutText}>🚪  {devBypass ? 'Exit Dev Mode' : 'Sign Out'}</Text>
         </TouchableOpacity>
@@ -97,7 +127,8 @@ export default function DrawerContent({ state, navigation, devBypass, setDevBypa
 const s = StyleSheet.create({
   drawer:  { backgroundColor: colors.blue },
   content: { flex: 1 },
-  header:  { flexDirection: 'row', alignItems: 'center', gap: 10, padding: spacing.xl, paddingTop: spacing.xxl, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.15)', marginBottom: spacing.sm },
+
+  header:       { flexDirection: 'row', alignItems: 'center', gap: 10, padding: spacing.xl, paddingTop: spacing.xxl, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.15)', marginBottom: spacing.sm },
   logoBox:      { width: 40, height: 40, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
   appName:      { fontSize: font.lg, fontWeight: '700', color: colors.white },
   locationName: { fontSize: font.sm, color: 'rgba(255,255,255,0.7)' },
@@ -117,9 +148,17 @@ const s = StyleSheet.create({
   navLabel:       { fontSize: font.base, fontWeight: '500', color: 'rgba(255,255,255,0.8)' },
   navLabelActive: { color: colors.white, fontWeight: '700' },
 
-  footer:        { padding: spacing.sm, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)', marginTop: spacing.md },
-  footerBtn:     { padding: spacing.md, borderRadius: radius.sm, marginBottom: 2 },
-  footerBtnText: { fontSize: font.sm, color: 'rgba(255,255,255,0.7)', fontWeight: '500' },
-  logoutBtn:     { marginTop: 2 },
-  logoutText:    { fontSize: font.sm, color: '#fca5a5', fontWeight: '600' },
+  branchSection:      { marginHorizontal: spacing.sm, marginTop: spacing.sm, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)', paddingTop: spacing.md },
+  branchSectionLabel: { fontSize: font.sm, fontWeight: '700', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: spacing.sm, paddingHorizontal: spacing.sm },
+  branchItem:         { flexDirection: 'row', alignItems: 'center', gap: 10, padding: spacing.md, borderRadius: radius.sm, marginBottom: 2 },
+  branchItemActive:   { backgroundColor: 'rgba(255,255,255,0.15)' },
+  branchDot:          { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.3)' },
+  branchDotActive:    { backgroundColor: '#4ade80' },
+  branchText:         { fontSize: font.sm, color: 'rgba(255,255,255,0.7)', fontWeight: '500', flex: 1 },
+  branchTextActive:   { color: colors.white, fontWeight: '700' },
+
+  footer:     { padding: spacing.sm, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)', marginTop: spacing.sm },
+  footerBtn:  { padding: spacing.md, borderRadius: radius.sm },
+  logoutBtn:  {},
+  logoutText: { fontSize: font.sm, color: '#fca5a5', fontWeight: '600' },
 });
